@@ -16,7 +16,7 @@ namespace XcantloadX.DL.Main
         private GameObject bodyParent;
         private BoxCollider bodyCollider;
 
-        [NullCheck]
+        [NullCheck(false, "hitSound is unassigned; death audio is muted.")]
         public AudioClip hitSound;
 
         public Color lineColor = Color.white;
@@ -64,7 +64,8 @@ namespace XcantloadX.DL.Main
         {
             LevelContoller.instance.StopLevel();
             this.isStarted = false;
-            AudioSource.PlayClipAtPoint(this.hitSound, Camera.main.transform.position);
+            if (this.hitSound != null && Camera.main != null)
+                AudioSource.PlayClipAtPoint(this.hitSound, Camera.main.transform.position);
         }
 
         /// <summary>
