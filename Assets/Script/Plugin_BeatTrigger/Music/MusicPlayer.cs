@@ -98,6 +98,22 @@ namespace XcantloadX.DL.Music
             if (!this.IsPlaying || !this.inited)
                 return;
 
+            if (this.audioSource == null || this.audioSource.clip == null)
+            {
+                this.IsPlaying = false;
+                return;
+            }
+
+            // Without the Malody chart, the line remains manually playable and
+            // the assigned audio can finish, but beat-synchronized triggers stop.
+            if (this.Song == null)
+            {
+                timePosition = this.audioSource.time;
+                if (timePosition >= this.audioSource.clip.length)
+                    this.IsPlaying = false;
+                return;
+            }
+
             //计算当前播放位置
             timePosition = audioSource.time + this.Song.Offset;
             beatPosition = (float)Math.Round(this.timePosition / this.Song.SecPerBeat, 1);
@@ -170,10 +186,9 @@ namespace XcantloadX.DL.Music
             yield return request.Send();
             if (request.isError)
             {
-                Debug.LogError("Could not load beatmap at " + path + ": " + request.error);
+                string error = request.error;
                 request.Dispose();
-                this.initializing = false;
-                this.pendingPlay = false;
+                EnterAudioOnlyMode("Could not load beatmap at " + path + ": " + error);
                 yield break;
             }
             json = request.downloadHandler.text;
@@ -181,9 +196,7 @@ namespace XcantloadX.DL.Music
 #else
             if (!File.Exists(path))
             {
-                Debug.LogError("Could not load beatmap. Add the chart to Assets/StreamingAssets or set a valid beatmapPath. Tried: " + path);
-                this.initializing = false;
-                this.pendingPlay = false;
+                EnterAudioOnlyMode("Could not load beatmap. Tried: " + path);
                 yield break;
             }
             json = File.ReadAllText(path);
@@ -231,6 +244,18 @@ namespace XcantloadX.DL.Music
                 fileName = "1543646563.mc";
 
             return Application.streamingAssetsPath.TrimEnd('/') + "/" + fileName;
+        }
+
+        private void EnterAudioOnlyMode(string reason)
+        {
+            Debug.LogWarning(reason + " Continuing in audio-only mode; beat-triggered events are disabled.");
+            this.inited = true;
+            this.initializing = false;
+
+            bool shouldPlay = this.pendingPlay;
+            this.pendingPlay = false;
+            if (shouldPlay)
+                Play();
         }
 
         /// <summary>
@@ -310,9 +335,9 @@ namespace XcantloadX.DL.Music
                 return;
             }
 
-            if (this.Song == null || this.audioSource == null)
+            if (this.audioSource == null || this.audioSource.clip == null)
             {
-                Debug.LogError("MusicPlayer is not ready. Check that a valid beatmap and audio clip are assigned.");
+                Debug.LogError("MusicPlayer is not ready. Check that an audio clip is assigned.");
                 return;
             }
 
