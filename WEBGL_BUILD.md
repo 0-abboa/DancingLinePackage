@@ -1,14 +1,26 @@
 # WebGL test build
 
-This is a test port of the existing Unity project. The project started on Unity **5.6.0f3** and this branch targets Unity **2019.4.40f1** so the hosted build pipeline can use a supported editor. Opening it upgrades the legacy project data.
+This branch tests the one gameplay scene present in the archived Unity project. It is not a complete Dancing Line level library.
 
-## Test mode without the Malody chart
+## Scene and music inventory
 
-The chart `1543646563.mc` is absent from the repository. This test build can still start the main scene and play its assigned audio clip without that chart. The player can move and turn manually, but every beat-synchronized trigger is disabled, so level timing and effects may be incomplete.
+| Scene | Role | Music and chart evidence |
+| --- | --- | --- |
+| `Assets/Level/BeginningOld/Level.unity` | The only gameplay scene in the repository; this is the scene selected by `WebGLBuild.Build`. | `Assets/Level/BeginningOld/The Beginning (old).mp3` is in the matching level folder, so it is the strongest likely pairing. The scene's old chart path names `1579349376.mc`, but the original chart is absent. |
+| `Assets/Scene/GreenBackgroundDL.unity` | Placeholder, not a music level. | Its old local path mentions `1543646563.mc`; that path is not evidence of a song match. No chart is supplied for this placeholder. |
+| `Assets/Test/DLTest.unity` | Test scene. | References a local temporary chart named `1550817018.mc`; no matching music track is established. |
+| `Assets/Test/AnimationTest.unity` | Animation test scene. | References a local chart named `1546327363.mc`; no matching music track is established. |
 
-If the chart is added later at `Assets/StreamingAssets/1543646563.mc`, `MusicPlayer` loads it and restores beat-trigger behavior. The chart is optional for this test build.
+Music files in the repository:
 
-This project currently has one main gameplay scene; it is a test of whether this port remains usable without the chart, not a large level library.
+- `Assets/Level/BeginningOld/The Beginning (old).mp3`
+- `Assets/Test/Music/Toby Fox - MEGALOVANIA.mp3`
+- `Assets/Test/Music/丑小鸭.ogg`
+- `Assets/Test/Music/赛车.ogg`
+
+The three files under `Assets/Test/Music` are test assets; the repository does not contain corresponding production scenes. The upstream repository and its commit history contain no additional scene files. The default Unity build settings point to `GreenBackgroundDL`; this branch's build method explicitly selects `Level.unity`.
+
+The generated beat grids previously placed in `Assets/StreamingAssets` were removed because they were not recovered or verified charts. With a missing chart, the modified `MusicPlayer` falls back to audio-only playback and disables beat-synchronized triggers. The audio clip assignment still needs verification in a built runtime.
 
 ## Build locally
 
