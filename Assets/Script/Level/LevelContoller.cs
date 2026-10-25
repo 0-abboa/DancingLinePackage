@@ -65,7 +65,8 @@ namespace XcantloadX.DL.Main
         /// </summary>
         public void StopLevel()
         {
-            this.musicPlayer.Pause();
+            if (this.musicPlayer != null)
+                this.musicPlayer.Pause();
         }
     }
 }
