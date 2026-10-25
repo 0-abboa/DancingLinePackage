@@ -184,7 +184,7 @@ namespace XcantloadX.DL.Music
             // StreamingAssets is a URL in WebGL, so it must be read with UnityWebRequest.
             UnityWebRequest request = UnityWebRequest.Get(path);
             yield return request.Send();
-            if (request.isError)
+            if (request.isNetworkError || request.isHttpError)
             {
                 string error = request.error;
                 request.Dispose();
