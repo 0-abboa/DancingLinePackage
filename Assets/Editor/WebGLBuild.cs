@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 public static class WebGLBuild
@@ -30,13 +31,17 @@ public static class WebGLBuild
             outputPath = Path.Combine(Directory.GetCurrentDirectory(), "Build", "WebGL");
 
         Directory.CreateDirectory(outputPath);
-        string error = BuildPipeline.BuildPlayer(
+        BuildReport report = BuildPipeline.BuildPlayer(
             scenes.ToArray(),
             outputPath,
             BuildTarget.WebGL,
             BuildOptions.None);
 
-        if (!string.IsNullOrEmpty(error))
-            throw new InvalidOperationException("WebGL build failed: " + error);
+        if (report == null || report.summary.result != BuildResult.Succeeded)
+        {
+            string result = report == null ? "no build report was returned" :
+                report.summary.result + " (" + report.summary.totalErrors + " errors)";
+            throw new InvalidOperationException("WebGL build failed: " + result);
+        }
     }
 }
