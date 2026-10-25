@@ -214,9 +214,7 @@ namespace XcantloadX.DL.Music
 
             if (parseException != null)
             {
-                Debug.LogError("Could not parse beatmap at " + path + ": " + parseException.Message);
-                this.initializing = false;
-                this.pendingPlay = false;
+                EnterAudioOnlyMode("Could not parse beatmap at " + path + ": " + parseException.Message);
                 yield break;
             }
 
