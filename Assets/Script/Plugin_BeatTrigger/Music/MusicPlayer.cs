@@ -1,7 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 using System;
+using System.IO;
 
 /// <summary>
 /// 播放音乐
@@ -34,6 +36,8 @@ namespace XcantloadX.DL.Music
         [SerializeField] private int currentIndex = 0;
 
         private bool inited = false; //是否已经初始化
+        private bool initializing = false;
+        private bool pendingPlay = false;
 
         private static MusicPlayer _main = null;
         public static MusicPlayer Main
@@ -85,7 +89,7 @@ namespace XcantloadX.DL.Music
         {
             //TODO:设计Editor GUI
             
-            Init();
+            StartCoroutine(Init());
         }
 
 
@@ -143,10 +147,12 @@ namespace XcantloadX.DL.Music
         }
 
         //初始化脚本
-        private void Init()
+        private IEnumerator Init()
         {
-            if (this.inited)
-                return;
+            if (this.inited || this.initializing)
+                yield break;
+
+            this.initializing = true;
 
             //加载 AudioSource
             if (this.audioSource == null)
@@ -155,13 +161,76 @@ namespace XcantloadX.DL.Music
                 this.audioSource.clip = this.audioClip;
             }
 
-            //检查谱面文件
-            if (string.IsNullOrEmpty(this.beatmapPath) || !System.IO.File.Exists(this.beatmapPath))
-                throw new Exception("The beatmap path is empty or invalid.");
-            else
-                LoadSong(MalodySong.CreateFromMalody(System.IO.File.ReadAllText(this.beatmapPath)));
+            string path = ResolveBeatmapPath();
+            string json = null;
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // StreamingAssets is a URL in WebGL, so it must be read with UnityWebRequest.
+            UnityWebRequest request = UnityWebRequest.Get(path);
+            yield return request.Send();
+            if (request.isError)
+            {
+                Debug.LogError("Could not load beatmap at " + path + ": " + request.error);
+                request.Dispose();
+                this.initializing = false;
+                this.pendingPlay = false;
+                yield break;
+            }
+            json = request.downloadHandler.text;
+            request.Dispose();
+#else
+            if (!File.Exists(path))
+            {
+                Debug.LogError("Could not load beatmap. Add the chart to Assets/StreamingAssets or set a valid beatmapPath. Tried: " + path);
+                this.initializing = false;
+                this.pendingPlay = false;
+                yield break;
+            }
+            json = File.ReadAllText(path);
+#endif
+
+            Exception parseException = null;
+            try
+            {
+                LoadSong(MalodySong.CreateFromMalody(json));
+            }
+            catch (Exception exception)
+            {
+                parseException = exception;
+            }
+
+            if (parseException != null)
+            {
+                Debug.LogError("Could not parse beatmap at " + path + ": " + parseException.Message);
+                this.initializing = false;
+                this.pendingPlay = false;
+                yield break;
+            }
 
             this.inited = true;
+            this.initializing = false;
+
+            if (this.pendingPlay)
+            {
+                this.pendingPlay = false;
+                Play();
+            }
+        }
+
+        private string ResolveBeatmapPath()
+        {
+            if (!string.IsNullOrEmpty(this.beatmapPath) && File.Exists(this.beatmapPath))
+                return this.beatmapPath;
+
+            // Older scenes store an absolute Windows path. Reuse its filename and
+            // resolve it from StreamingAssets so the project also works on the web.
+            string configuredPath = (this.beatmapPath ?? string.Empty).Replace('\\', '/');
+            int lastSlash = configuredPath.LastIndexOf('/');
+            string fileName = lastSlash >= 0 ? configuredPath.Substring(lastSlash + 1) : configuredPath;
+            if (string.IsNullOrEmpty(fileName))
+                fileName = "1543646563.mc";
+
+            return Application.streamingAssetsPath.TrimEnd('/') + "/" + fileName;
         }
 
         /// <summary>
@@ -233,10 +302,19 @@ namespace XcantloadX.DL.Music
         /// </summary>
         public void Play()
         {
-            if (this.Song == null)
-                throw new Exception("Please load a song first!");
-            if (this.audioSource == null)
-                Init();
+            if (!this.inited)
+            {
+                this.pendingPlay = true;
+                if (!this.initializing)
+                    StartCoroutine(Init());
+                return;
+            }
+
+            if (this.Song == null || this.audioSource == null)
+            {
+                Debug.LogError("MusicPlayer is not ready. Check that a valid beatmap and audio clip are assigned.");
+                return;
+            }
 
             startTime = AudioSettings.dspTime;
             this.audioSource.Play();
@@ -248,6 +326,9 @@ namespace XcantloadX.DL.Music
         /// </summary>
         public void Pause()
         {
+            if (this.audioSource == null)
+                return;
+
             this.audioSource.Pause();
             this.IsPlaying = false;
         }
