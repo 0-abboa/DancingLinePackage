@@ -10,21 +10,13 @@ public static class WebGLBuild
     public static void Build()
     {
         List<string> scenes = new List<string>();
-        foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
-        {
-            if (scene.enabled && File.Exists(scene.path))
-                scenes.Add(scene.path);
-        }
+        // Build the real level for this WebGL test. The configured editor scene is a blank
+        // green-background test scene and does not exercise gameplay.
+        const string gameplayScene = "Assets/Level/BeginningOld/Level.unity";
+        if (!File.Exists(gameplayScene))
+            throw new InvalidOperationException("The Beginning Old gameplay scene was not found: " + gameplayScene);
 
-        if (scenes.Count == 0)
-        {
-            const string mainScene = "Assets/Scene/GreenBackgroundDL.unity";
-            if (File.Exists(mainScene))
-                scenes.Add(mainScene);
-        }
-
-        if (scenes.Count == 0)
-            throw new InvalidOperationException("No enabled scenes are configured in Editor Build Settings, and the main scene was not found.");
+        scenes.Add(gameplayScene);
 
         string outputPath = Environment.GetEnvironmentVariable("WEBGL_BUILD_PATH");
         if (string.IsNullOrEmpty(outputPath))
