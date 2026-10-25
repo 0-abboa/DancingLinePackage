@@ -1,32 +1,25 @@
-# WebGL packaging
+# WebGL test build
 
-This project uses Unity **5.6.0f3**. Build it with that editor and its WebGL support module so Unity can import the project using its original serialization and scripting APIs.
+This is a test port of the existing Unity project. The project started on Unity **5.6.0f3** and this branch targets Unity **2019.4.40f1** so the hosted build pipeline can use a supported editor. Opening it upgrades the legacy project data.
 
-## Required game data
+## Test mode without the Malody chart
 
-The startup scene stores a Windows-only Malody chart path ending in `1543646563.mc`. The chart is not present in the repository. A playable build needs that chart at:
+The chart `1543646563.mc` is absent from the repository. This test build can still start the main scene and play its assigned audio clip without that chart. The player can move and turn manually, but every beat-synchronized trigger is disabled, so level timing and effects may be incomplete.
 
-```text
-Assets/StreamingAssets/1543646563.mc
-```
+If the chart is added later at `Assets/StreamingAssets/1543646563.mc`, `MusicPlayer` loads it and restores beat-trigger behavior. The chart is optional for this test build.
 
-`MusicPlayer` now resolves the old absolute path to `StreamingAssets` and uses `UnityWebRequest` in WebGL. The build entry point checks for the chart and stops with a specific error if it is missing, instead of producing an artifact that fails when launched.
+This project currently has one main gameplay scene; it is a test of whether this port remains usable without the chart, not a large level library.
 
-## Build
+## Build locally
 
-With Unity 5.6.0f3 and WebGL support installed, run from the repository root:
+With Unity **2019.4.40f1** and the WebGL Build Support module installed, run from the repository root:
 
 ```sh
 Unity -quit -batchmode -nographics -projectPath . -executeMethod WebGLBuild.Build -logFile -
 ```
 
-The output goes to `Build/WebGL`. Set `WEBGL_BUILD_PATH` to use another output directory.
+The output goes to `Build/WebGL`. Set `WEBGL_BUILD_PATH` to use another output directory. Serve the generated files over HTTP(S); Unity WebGL does not run correctly from `file://`.
 
-The generated folder is a static web app and must be served over HTTP(S); opening its `index.html` directly with `file://` is not supported by Unity WebGL.
+## Hosted build
 
-## Automation limitation
-
-The maintained GameCI version pipeline starts at Unity 2017, while Unity Build Automation currently lists versions starting at 2019.4. Neither service provides a supported Unity 5.6.0f3 build image. A hosted workflow would need a custom legacy-editor installation and a Unity license file; it cannot use the standard Unity build actions as-is.
-
-- [GameCI versioning backend](https://github.com/game-ci/versioning-backend) filters stable editor builds to 2017 and newer.
-- [Unity Build Automation supported versions](https://docs.unity.com/en-us/build-automation/reference/supported-unity-versions)
+The GitHub Actions workflow builds WebGL and uploads a downloadable test artifact. GameCI requires a Unity license configured in the repository's Actions secrets (`UNITY_LICENSE`, `UNITY_EMAIL`, and `UNITY_PASSWORD`).
