@@ -45,32 +45,31 @@ public class MalodySong
 
 		//获取所有节拍
 		List<MojoJson.JsonValue> jsonBeats = jsonObj.AsObjectGetArray("note");
-		song.Beats = new float[jsonBeats.Count - 1]; //第一个节拍为播放音乐，没有实际作用
+		List<float> beats = new List<float>();
 
 		for (int i = 0; i < jsonBeats.Count; i++)
 		{
-			//"beat": [0,0,4] 第一个为节拍数，第二个为几分之几节拍，前两个由 0 数起
-			//例如：[0,0,4] 为 一拍 + 四分之一拍
-			//		[1,2,4] 为 一拍 + 四分之三拍
-
+			// "beat": [bar, numerator, denominator]
 			MojoJson.JsonValue jsonBeat = jsonBeats[i];
-			int beatNum = jsonBeat.AsObjectGetArray("beat")[0].AsInt();
-			int subBeatNum = jsonBeat.AsObjectGetArray("beat")[1].AsInt();
-			int subBeatPerBeat = jsonBeat.AsObjectGetArray("beat")[2].AsInt();
-            if (beatNum == 0 && subBeatNum == 0 && subBeatPerBeat == 1) //此拍为播放音频，不表示实际节奏点
-            {
-                //获取偏移
-                //if (!jsonBeat.AsObjectGetIsNull("offset"))
-                if (jsonString.Contains("offset"))
-                    song.Offset = jsonBeat.AsObjectGetFloat("offset") / 1000; //毫秒转为秒
-                else
-                    song.Offset = 0;
-                continue;
-            }
+			List<MojoJson.JsonValue> beatParts = jsonBeat.AsObjectGetArray("beat");
+			int beatNum = beatParts[0].AsInt();
+			int subBeatNum = beatParts[1].AsInt();
+			int subBeatPerBeat = beatParts[2].AsInt();
+			if (subBeatPerBeat <= 0)
+				throw new System.FormatException("Beat denominator must be greater than zero.");
 
-			song.Beats[i] = (beatNum) + ((subBeatNum) / (float)subBeatPerBeat); //强制转换成浮点数运算，避免自动取整
+			if (beatNum == 0 && subBeatNum == 0 && subBeatPerBeat == 1)
+			{
+				// This marker starts the audio and is not a playable beat.
+				if (!jsonBeat.AsObjectGetIsNull("offset"))
+					song.Offset = jsonBeat.AsObjectGetFloat("offset") / 1000;
+				continue;
+			}
+
+			beats.Add(beatNum + (subBeatNum / (float)subBeatPerBeat));
 		}
 
+		song.Beats = beats.ToArray();
 		//获取 bpm
 		song.Bpm = jsonObj.AsObjectGetArray("time")[0].AsObjectGetFloat("bpm"); //TODO:加入分段bpm的支持
 		song.SecPerBeat = 60f / song.Bpm;
