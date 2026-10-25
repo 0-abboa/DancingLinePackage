@@ -6,17 +6,8 @@ using UnityEngine;
 
 public static class WebGLBuild
 {
-    private const string RequiredBeatmap = "Assets/StreamingAssets/1543646563.mc";
-
     public static void Build()
     {
-        if (!File.Exists(RequiredBeatmap))
-        {
-            throw new InvalidOperationException(
-                "The startup scene references Malody chart 1543646563.mc, but it is not in this repository. " +
-                "Add the chart at " + RequiredBeatmap + " before building a playable WebGL package.");
-        }
-
         List<string> scenes = new List<string>();
         foreach (EditorBuildSettingsScene scene in EditorBuildSettings.scenes)
         {
@@ -25,7 +16,14 @@ public static class WebGLBuild
         }
 
         if (scenes.Count == 0)
-            throw new InvalidOperationException("No enabled scenes are configured in Editor Build Settings.");
+        {
+            const string mainScene = "Assets/Scene/GreenBackgroundDL.unity";
+            if (File.Exists(mainScene))
+                scenes.Add(mainScene);
+        }
+
+        if (scenes.Count == 0)
+            throw new InvalidOperationException("No enabled scenes are configured in Editor Build Settings, and the main scene was not found.");
 
         string outputPath = Environment.GetEnvironmentVariable("WEBGL_BUILD_PATH");
         if (string.IsNullOrEmpty(outputPath))
