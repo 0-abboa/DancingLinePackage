@@ -1,0 +1,63 @@
+name: GodotLine Web probe
+
+on:
+  push:
+    branches:
+      - codex/godotline-web-probe
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout probe branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Checkout pinned GodotLine collection
+        run: |
+          git clone --no-checkout https://github.com/godotline/GodotLineCollection.git GodotLineCollection
+          git -C GodotLineCollection checkout 9027aed609b436135efe857ec57576179d7105a2
+
+      - name: Install Godot 4.7.2 and Web export templates
+        run: |
+          set -euo pipefail
+          godot_dir="$RUNNER_TEMP/godot"
+          export_dir="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mkdir -p "$godot_dir" "$export_dir"
+
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/godot.zip" \
+            "https://downloads.godotengine.org/?flavor=stable&platform=linux.64&slug=linux.x86_64.zip&version=4.7.2"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$godot_dir"
+          chmod +x "$godot_dir/Godot_v4.7.2-stable_linux.x86_64"
+
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/export_templates.tpz" \
+            "https://downloads.godotengine.org/?flavor=stable&platform=templates&slug=export_templates.tpz&version=4.7.2"
+          mkdir -p "$RUNNER_TEMP/export_templates"
+          unzip -q "$RUNNER_TEMP/export_templates.tpz" -d "$RUNNER_TEMP/export_templates"
+          cp -R "$RUNNER_TEMP/export_templates/templates/." "$export_dir/"
+
+          echo "GODOT_BIN=$godot_dir/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
+
+      - name: Import project resources
+        run: "$GODOT_BIN" --headless --editor --path GodotLineCollection --import --quit
+
+      - name: Export Web build
+        run: |
+          mkdir -p GodotLineCollection/build
+          "$GODOT_BIN" --headless --path GodotLineCollection \
+            --export-release "Web" "$GITHUB_WORKSPACE/GodotLineCollection/build/Export.html"
+
+      - name: Upload Web build for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: godotline-web-probe
+          path: GodotLineCollection/build/
+          if-no-files-found: error
+          retention-days: 14
