@@ -11,7 +11,7 @@ permissions:
 jobs:
   web-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - name: Checkout probe branch
         uses: actions/checkout@v5
@@ -44,6 +44,11 @@ jobs:
           cp -R "$RUNNER_TEMP/export_templates/templates/." "$export_dir/"
 
           echo "GODOT_BIN=$godot_dir/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
+
+      - name: Disable editor plugins for CI import
+        run: |
+          perl -0pi -e 's/\[editor_plugins\]\nenabled=PackedStringArray\([^\n]*\)/[editor_plugins]\nenabled=PackedStringArray()/s' GodotLineCollection/project.godot
+          sed -n '/^\[editor_plugins\]/,+1p' GodotLineCollection/project.godot
 
       - name: Import project resources
         run: |
