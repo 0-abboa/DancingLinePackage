@@ -46,7 +46,8 @@ jobs:
           echo "GODOT_BIN=$godot_dir/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
 
       - name: Import project resources
-        run: "$GODOT_BIN" --headless --editor --path GodotLineCollection --import --quit
+        run: |
+          "$GODOT_BIN" --headless --editor --path GodotLineCollection --import --quit
 
       - name: Export Web build
         run: |
