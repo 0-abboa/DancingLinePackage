@@ -47,8 +47,9 @@ jobs:
 
       - name: Disable editor plugins for CI import
         run: |
-          perl -0pi -e 's/\[editor_plugins\]\nenabled=PackedStringArray\([^\n]*\)/[editor_plugins]\nenabled=PackedStringArray()/s' GodotLineCollection/project.godot
-          sed -n '/^\[editor_plugins\]/,+1p' GodotLineCollection/project.godot
+          set -euo pipefail
+          perl -0pi -e 's/(\[editor_plugins\]\n\n?)enabled=PackedStringArray\([^\n]*\)/$1enabled=PackedStringArray()/s' GodotLineCollection/project.godot
+          grep -F 'enabled=PackedStringArray()' GodotLineCollection/project.godot
 
       - name: Import project resources
         run: |
